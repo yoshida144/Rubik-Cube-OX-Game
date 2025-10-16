@@ -286,7 +286,6 @@ class CubeTicTacToeScene(Scene):
         else: # title phase
             # ... (title drawing logic from original code)
             tint(1,1,1,1); image('IMG_0474.JPG',0,0,self.size.w,self.size.h)
-            self.draw_stylish_text('3D Cube OX Game', 'Futura-CondensedExtraBold', 80, center_x, self.size.h - 150, 'white')
             btn_w, btn_h = 350, 70; btn_spacing = 30
             normal_btn_y = center_y - btn_h/2 - btn_spacing
             self.normal_mode_button_rect = Rect(center_x - btn_w / 2, normal_btn_y, btn_w, btn_h)

@@ -234,21 +234,102 @@ class CubeTicTacToeScene(Scene):
                 else:
                     self.draw_stylish_text("DRAW", 'Futura-CondensedExtraBold', 120 * scale, center_x, center_y, 'white')
         elif self.game_phase == 'rules':
-            # ... (rule drawing logic from original code)
-            tint(1,1,1,1); image('IMG_0479.JPG',0,0,self.size.w,self.size.h)
-            fill(0, 0, 0, 0.7); rect(0, 0, self.size.w, self.size.h)
-            rules = ["ルール説明", " ", "1. 自分のターンにできることは", "   「キューブを回転」「マークを配置」", "   「卵を選択」のいずれかです。"]
-            if self.game_ruleset == 'custom':
-                rules.extend([" ", "2. 怪獣のマスにはマークを置けません。", "   回転で一緒に動き、1ターンごとに動きます。", " ", "3. 怪獣が動いた跡には卵が残ります。", "   卵を選択するとマークが複数配置されます。", "   (10回に1度、金の卵になります)"])
+            tint(1, 1, 1, 1)
+            if self.game_mode == 'AI':
+                image('IMG_0479.JPG', 0, 0, self.size.w, self.size.h)
             else:
-                rules.extend([" ", "2. 盤面で縦・横・斜めに3つ揃えると勝利です。", "3. 同じ盤面が3回繰り返されると引き分けです。"])
-            y_pos = self.size.h - 150
-            for i, line in enumerate(rules):
-                font_size = 36 if i == 0 else 24; text(line, 'HiraginoSans-W6', font_size, center_x, y_pos); y_pos -= 38
-            btn_w, btn_h = 300, 80; btn_x, btn_y = center_x - btn_w / 2, 100
+                image('IMG_0474.JPG', 0, 0, self.size.w, self.size.h)
+            
+            fill(0,0,0,0.7) 
+            rect(0, 0, self.size.w, self.size.h)
+
+            lines = []
+            rule_title = ""
+            
+            if self.game_ruleset == 'normal':
+                # === ノーマルモード用の説明 ===
+                rule_title = "ノーマルモード ルール"
+                lines = [
+                    ("🎯", "目的:マークを揃えて勝利!"),
+                    ("⚔️", "縦・横・斜めに3つ揃えよう"),
+                    ("🔄", "自分のターン:「回転」か「配置」"),
+                    ("🤔", "相手のラインを回転で崩せ!"),
+                    ("⚖️", "同じ盤面が3回続くと引き分け")
+                ]
+            else:
+                # === 怪獣モード(カスタム)用の説明 ===
+                rule_title = "怪獣モード ルール"
+                lines = [
+                    ("🎯", "目的:マークを揃えて勝利!"),
+                    ("⚔️", "縦・横・斜めに3つ揃えよう"),
+                    ("🔄", "自分のターン:「回転」か「配置」"),
+                    ("🤔", "相手のラインを回転で崩せ!"),
+                    ("⚖️", "同じ盤面が3回続くと引き分け"),
+                    ("🦖", "怪獣がいるマスには置けません"),
+                    ("👣", "怪獣は「回転」すると移動します"),
+                    ("🥚", "動いた跡に「卵」が残ります"),
+                    ("✨", "卵を取るとマークが複数出現!"),
+                    ("⚠️", "「金の卵」は一発逆転のチャンス")
+                ]
+
+            # --- 3. ルールウィンドウ(ボード)の描画 ---
+            window_w = self.size.w * 0.9
+            window_h = self.size.h * 0.65
+            window_x = center_x - window_w / 2
+            window_y = center_y - window_h / 2 + 20
+
+            fill(0, 0, 0, 0.5); rect(window_x + 10, window_y - 10, window_w, window_h)
+            fill(0.9,0.9,0.9,0.7); rect(window_x, window_y, window_w, window_h)
+            
+            stroke(0, 0.2, 0, 1); stroke_weight(4); no_fill()
+            rect(window_x, window_y, window_w, window_h)
+            no_stroke()
+
+            # --- 4. テキストの描画 ---
+            # タイトル
+            fill('white')
+            text(rule_title, 'HiraginoSans-W6', 42, center_x, window_y + window_h - 60)
+            
+            stroke(0.8, 0.8, 0.8); stroke_weight(2)
+            line(window_x + 30, window_y + window_h - 90, window_x + window_w - 30, window_y + window_h - 90)
+            no_stroke()
+
+            # 各行の説明文
+            start_y = window_y + window_h - 150
+            line_height = 40
+            
+            for i, (icon, txt) in enumerate(lines):
+                y_pos = start_y - i * line_height
+                
+                # アイコン(左側に配置)
+                text(icon, 'AppleColorEmoji', 32, window_x + 60, y_pos)
+                
+                fill(0.2, 0.2, 0.2)
+                text_x_offset = window_x + 110 + (len(txt) * 11) 
+                
+                
+                text(txt, 'HiraginoSans-W6', 24, center_x + 20, y_pos)
+
+            # --- 5. スタートボタン ---
+            btn_w, btn_h = 280, 70
+            btn_x, btn_y = center_x - btn_w / 2, window_y + 40
+            
             self.rules_start_button_rect = Rect(btn_x, btn_y, btn_w, btn_h)
-            fill(0.1, 0.8, 0.5, 0.8); stroke_weight(3); stroke(0.4, 1.0, 0.8, 1.0); rect(*self.rules_start_button_rect)
-            tint('white'); text('ゲーム開始', 'Helvetica-Bold', 40, center_x, btn_y + btn_h/2)
+            
+            # ボタンの色
+            if self.game_ruleset == 'custom':
+                fill(0.9, 0.3, 0.4) # 赤系
+            else:
+                fill(0.2, 0.6, 0.8) # 青系
+                
+            rect(btn_x, btn_y, btn_w, btn_h)
+            
+            stroke(1, 1, 1, 0.8); stroke_weight(3); no_fill()
+            rect(btn_x, btn_y, btn_w, btn_h)
+            no_stroke()
+            
+            tint('white')
+            text('GAME START', 'Futura-CondensedExtraBold', 36, center_x, btn_y + btn_h/2)
         elif self.game_phase == 'player_selection':
             # ... (player selection drawing logic from original code)
             tint(1,1,1,1); image('IMG_0474.JPG',0,0,self.size.w,self.size.h)

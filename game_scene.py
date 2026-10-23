@@ -10,11 +10,9 @@
 # など、ユーザーが直接触れる部分を専門に扱います。
 # ===================================================================================
 
-from scene import *
-import ui
+from desktop_scene import *
 import random
 import copy
-import sound
 import math
 from constants import *
 from game_logic import GameLogic
@@ -73,45 +71,10 @@ class AIPlayer:
         return False
         
     def simulate_rotation(self, original_state, move):
-        state = copy.deepcopy(original_state); s = state
-        def rotate_face_sim(face_key, clockwise=True):
-            face = s[face_key]
-            if clockwise: s[face_key] = [list(row) for row in zip(*face[::-1])]
-            else: s[face_key] = [list(row) for row in zip(*face)][::-1]
-        face_moves = {"U": ('U', True), "U'": ('U', False), "D": ('D', True), "D'": ('D', False), "R": ('R', False), "R'": ('R', True), "L": ('L', False), "L'": ('L', True), "F": ('F', True), "F'": ('F', False), "B": ('B', True), "B'": ('B', False)}
-        if move in face_moves: face, clockwise = face_moves[move]; rotate_face_sim(face, clockwise)
-        # (Rest of the simulation logic is the same as the original rotate)
-        if move in ("D", "D'"):
-            temp_f=s['F'][2][:]; temp_r=s['R'][2][:]; temp_b=s['B'][2][:]; temp_l=s['L'][2][:]
-            if move == "D": s['R'][2]=temp_f; s['F'][2]=temp_l; s['L'][2]=temp_b; s['B'][2]=temp_r
-            else: s['L'][2]=temp_f; s['F'][2]=temp_r; s['R'][2]=temp_b; s['B'][2]=temp_l
-        elif move in ("U", "U'"):
-            temp_f=s['F'][0][:]; temp_r=s['R'][0][:]; temp_b=s['B'][0][:]; temp_l=s['L'][0][:]
-            if move == "U": s['L'][0]=temp_f; s['F'][0]=temp_r; s['R'][0]=temp_b; s['B'][0]=temp_l
-            else: s['R'][0]=temp_f; s['F'][0]=temp_l; s['L'][0]=temp_b; s['B'][0]=temp_r
-        elif move in ("R", "R'"):
-            temp_u=[s['U'][i][2] for i in range(3)]; temp_f=[s['F'][i][2] for i in range(3)]; temp_d=[s['D'][i][2] for i in range(3)]; temp_b=[s['B'][i][0] for i in range(3)]
-            if move == "R":
-                for i in range(3): s['F'][i][2]=temp_u[i]; s['D'][i][2]=temp_f[i]; s['B'][2-i][0]=temp_d[i]; s['U'][i][2]=temp_b[2-i]
-            else:
-                for i in range(3): s['B'][2-i][0]=temp_u[i]; s['D'][i][2]=temp_b[2-i]; s['F'][i][2]=temp_d[i]; s['U'][i][2]=temp_f[i]
-        elif move in ("L", "L'"):
-            temp_u=[s['U'][i][0] for i in range(3)]; temp_f=[s['F'][i][0] for i in range(3)]; temp_d=[s['D'][i][0] for i in range(3)]; temp_b=[s['B'][i][2] for i in range(3)]
-            if move == "L":
-                for i in range(3): s['B'][2-i][2]=temp_u[i]; s['D'][i][0]=temp_b[2-i]; s['F'][i][0]=temp_d[i]; s['U'][i][0]=temp_f[i]
-            else:
-                for i in range(3): s['F'][i][0]=temp_u[i]; s['D'][i][0]=temp_f[i]; s['B'][2-i][2]=temp_d[i]; s['U'][i][0]=temp_b[2-i]
-        elif move in ("M", "M'"):
-            temp_u=[s['U'][i][1] for i in range(3)]; temp_f=[s['F'][i][1] for i in range(3)]; temp_d=[s['D'][i][1] for i in range(3)]; temp_b=[s['B'][i][1] for i in range(3)]
-            if move == "M":
-                for i in range(3): s['F'][i][1]=temp_u[i]; s['D'][i][1]=temp_f[i]; s['B'][2-i][1]=temp_d[i]; s['U'][i][1]=temp_b[2-i]
-            else:
-                for i in range(3): s['B'][2-i][1]=temp_u[i]; s['D'][i][1]=temp_b[2-i]; s['F'][i][1]=temp_d[i]; s['U'][i][1]=temp_f[i]
-        elif move in ("E", "E'"):
-            temp_f=s['F'][1][:]; temp_r=s['R'][1][:]; temp_b=s['B'][1][:]; temp_l=s['L'][1][:]
-            if move == "E": s['L'][1]=temp_f; s['B'][1]=temp_l; s['R'][1]=temp_b; s['F'][1]=temp_r
-            else: s['R'][1]=temp_f; s['B'][1]=temp_r; s['L'][1]=temp_b; s['F'][1]=temp_l
-        return state
+        game = GameLogic()
+        game.marker_state = copy.deepcopy(original_state)
+        game.rotate(move)
+        return game.marker_state
 
 class CubeTicTacToeScene(Scene):
     """
@@ -156,7 +119,9 @@ class CubeTicTacToeScene(Scene):
 
     def reset_game_scene(self):
         # ... (ゲーム画面の状態をリセット)
+        self.cancel_delays()
         self.game.reset()
+        self.turn_pending = False
         self.current_player = 'O'; self.game_over = False; self.winner = None
         self.status_message = "Oのターン"; self.victory_particles.clear(); self.animation_timer = 0
         self.state_history.clear()
@@ -202,8 +167,8 @@ class CubeTicTacToeScene(Scene):
             back_btn_x, back_btn_y = 10, self.size.h - header_height + (header_height - back_btn_h) / 2
             self.back_button_rect = Rect(back_btn_x, back_btn_y, back_btn_w, back_btn_h)
             fill(0.3, 0.3, 0.3, 0.8); rect(*self.back_button_rect)
-            self.draw_stylish_text('↩︎ モード選択へ', 'Futura-CondensedMedium', 18, back_btn_x + back_btn_w/2, back_btn_y + back_btn_h/2, 'white')
-            self.draw_stylish_text(self.status_message, 'Futura-CondensedMedium', 70, center_x, self.size.h - 30 - header_height / 2, 'white')
+            self.draw_stylish_text('← モード選択へ', 'Futura-CondensedMedium', 18, back_btn_x + back_btn_w/2, back_btn_y + back_btn_h/2, 'white')
+            self.draw_stylish_text(self.status_message, 'Futura-CondensedMedium', 34, center_x, self.size.h - header_height / 2, 'white')
             mode_text = 'vs AI' if self.game_mode == 'AI' else ('vs Player' if self.game_mode == '2P' else '3 Players')
             self.draw_stylish_text(mode_text, 'Futura-CondensedMedium', 18, self.size.w - 60, self.size.h - header_height / 2, (0.8, 0.8, 0.8, 1.0))
             face_total_size = TILE_SIZE * 3 + GAP * 2
@@ -363,7 +328,7 @@ class CubeTicTacToeScene(Scene):
             back_btn_w, back_btn_h = 120, 40
             self.back_button_rect = Rect(10, 10, back_btn_w, back_btn_h)
             fill(0.3, 0.3, 0.3, 0.8); rect(*self.back_button_rect)
-            self.draw_stylish_text('↩︎ 戻る', 'Futura-CondensedMedium', 18, 10 + back_btn_w/2, 10 + back_btn_h/2, 'white')
+            self.draw_stylish_text('← 戻る', 'Futura-CondensedMedium', 18, 10 + back_btn_w/2, 10 + back_btn_h/2, 'white')
         else: # title phase
             # ... (title drawing logic from original code)
             tint(1,1,1,1); image('IMG_0474.JPG',0,0,self.size.w,self.size.h)
@@ -453,6 +418,7 @@ class CubeTicTacToeScene(Scene):
                 self.game_phase = 'player_selection'; self.reset_game_scene(); return
             if self.game_over:
                 self.game_phase = 'title'; self.reset_game_scene(); return
+            if self.turn_pending: return
             if self.game_mode == 'AI' and self.current_player == 'X': return
             action_taken = False
             for key, rect_val in self.buttons.items():
@@ -488,6 +454,7 @@ class CubeTicTacToeScene(Scene):
                 
     def end_turn(self):
         # ... (ターン終了時の処理)
+        self.turn_pending = True
         self.check_win()
         if self.game_over: return
         
@@ -530,6 +497,8 @@ class CubeTicTacToeScene(Scene):
         indices_to_move = random.sample(range(len(self.game.kaiju_positions)), num_to_move)
         
         self.kaiju_animations.clear()
+        if len(self.kaiju_draw_positions) != len(self.game.kaiju_positions):
+            self.kaiju_draw_positions = [self._get_pixel_coords(p) for p in self.game.kaiju_positions]
         occupied_tiles = set(self.game.kaiju_positions)
         new_positions = {}
 
@@ -594,6 +563,7 @@ class CubeTicTacToeScene(Scene):
 
     def _switch_player_and_continue(self):
         # ... (プレイヤー交代)
+        self.turn_pending = False
         if self.game_mode == '3P':
             self.current_player = {'O':'X', 'X':'△', '△':'O'}[self.current_player]
         else:

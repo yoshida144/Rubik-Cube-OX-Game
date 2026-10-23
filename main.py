@@ -1,18 +1,29 @@
-# main.py
+"""Run the desktop game with ordinary Python 3."""
+import sys
 
-# ===================================================================================
-# ゲームを起動するためのメインファイルです。
-# このファイルを実行すると、`game_scene.py` の `CubeTicTacToeScene` が
-# 呼び出されてゲームが開始されます。
-# ===================================================================================
 
-import ui
-from scene import SceneView
-from game_scene import CubeTicTacToeScene
+def main():
+    try:
+        import tkinter as tk
+        from game_scene import CubeTicTacToeScene
+    except ImportError as exc:
+        print(f'必要なライブラリがありません: {exc}\n'
+              'Pillow: python -m pip install -r requirements.txt\n'
+              'Ubuntu/Debian の Tkinter: sudo apt install python3-tk', file=sys.stderr)
+        return 1
+    try:
+        root = tk.Tk()
+    except tk.TclError as exc:
+        print(f'画面を開けません: {exc}\nデスクトップ環境で実行してください。'
+              'ヘッドレス検証には xvfb-run を使用できます。', file=sys.stderr)
+        return 1
+    root.title('Rubik Cube OX Game')
+    root.geometry('1200x1000')
+    root.minsize(1120, 960)
+    scene = CubeTicTacToeScene(root)
+    scene.run()
+    return 0
+
 
 if __name__ == '__main__':
-    screen_size = ui.get_screen_size()
-    scene_view = SceneView(frame=(0, 0, screen_size.w, screen_size.h))
-    scene_view.scene = CubeTicTacToeScene()
-    scene_view.name = 'OX game'
-    scene_view.present('fullscreen')
+    raise SystemExit(main())
